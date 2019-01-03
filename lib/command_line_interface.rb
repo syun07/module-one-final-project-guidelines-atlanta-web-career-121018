@@ -6,12 +6,20 @@ class CommandLineInterface
     puts "Welcome to Adopt-Don't-Shop!"
   end
 
-  def create_user
+  def get_username
     #create new instance of user based on user input
+    puts "Please enter a username: "
+    gets.chomp.to_s
+  end
+
+  def find_or_create_username(username)
+    Caretaker.find_or_create_by(name: username)
+    puts "Welcome, #{username}!"
+    #use switch statement to say "Welcome back" if you already have an account
   end
 
   def get_zip_code
-    puts "Please enter your zip code:"
+    puts "Please enter your zip code to see shelters near you:"
     zip_code = gets.chomp
   end
 
@@ -77,10 +85,10 @@ class CommandLineInterface
     response = RestClient.get url
     response_hash = JSON.parse(response.body)
 
-    @pet_array = response_hash["petfinder"]["pets"]["pet"].collect do |pet|
-      pet["name"]["$t"]
+    response_hash["petfinder"]["pets"]["pet"].collect do |pet|
+      puts "Name: #{pet["name"]["$t"]}"
+      puts "  Type: #{pet["animal"]["$t"]}"
     end
-    binding.pry
   end
 
 
@@ -96,6 +104,8 @@ class CommandLineInterface
 
   def run
     greet
+    username = get_username
+    find_or_create_username(username)
     zip_code = get_zip_code
     @shelter_array = find_shelters(zip_code)
     input = get_user_input
@@ -104,27 +114,13 @@ class CommandLineInterface
     type_input = get_type_input
     get_pet(shelter_id)
   end
-
-
 end
 
 
-
-
-  # http://api.petfinder.com/shelter.getPets?key=b1eab88e7ce8602d4150d991dede49de&id=GA923&format=json
-
-
-
-  def search_pet_type(search_term)
-    url = "http://api.petfinder.com/pet.find?key=#{@@apikey}&animal=#{search_term}&format=json"
-    puts "URL: #{url}"
-    response = RestClient.get url
-    response_hash = JSON.parse(response.body)
-    # puts response_hash
-  end
-  #
-  # def run
-  #   greet
-  #   search_term = gets.chomp
-  #   search_pet_type(search_term)
+  # def search_pet_type(search_term)
+  #   url = "http://api.petfinder.com/pet.find?key=#{@@apikey}&animal=#{search_term}&format=json"
+  #   puts "URL: #{url}"
+  #   response = RestClient.get url
+  #   response_hash = JSON.parse(response.body)
+  #   # puts response_hash
   # end
