@@ -49,6 +49,7 @@ class CommandLineInterface
   #------------MENU------------#
 
   def menu
+    puts "       Main Menu       "
     puts "1. Find shelters near you"
     puts "2. Find a pet at random"
     puts "3. See your pets"
@@ -65,15 +66,18 @@ class CommandLineInterface
       shelter_id = get_shelter_id(selected_shelter)
       adoptable_pets = get_pet(shelter_id, selected_shelter)
       adopt_pet(adoptable_pets)
+      menu
     when "2"
       type_input = get_type_input
       response_hash = pet_response_hash(type_input)
       get_random_pet(response_hash)
       user_input = adopt_user_input(response_hash)
       adopt?(user_input, response_hash)
+      menu
+    when "3"
+      caretaker_pets
     end
   end
-
 
 
   #------------MENU OPTION 1------------#
@@ -99,7 +103,7 @@ class CommandLineInterface
   end
 
   def get_user_input
-    #user chooses from a list of shelters in their area
+    #print shelters near zip code, user chooses with index
     @shelter_array.each.with_index(1) do |shelter, index|
       puts "#{index}: #{shelter}"
     end
@@ -108,19 +112,19 @@ class CommandLineInterface
   end
 
   def shelter_info(input)
-    #get selected shelter
+    #get selected shelter name
      @shelter_array[input-1]
   end
 
   def create_shelter(selected_shelter)
+    #create new instance of shelter
     shelter = @zip_shelters.select { |shelter| shelter["name"]["$t"] == selected_shelter }.first
     @shelter = Shelter.find_or_create_by(name: shelter["name"]["$t"], location: shelter["city"]["$t"])
-
   end
 
   def get_shelter_id(selected_shelter)
     #iterate through all shelters to find name that matches selected shelter
-    #get shelter id
+    #if matches, get shelter id
     found_id = @zip_shelters.find do |shelter|
        shelter["name"]["$t"] == selected_shelter
     end
@@ -128,7 +132,7 @@ class CommandLineInterface
   end
 
   def get_pet(shelter_id, selected_shelter)
-    #use api & use shelter id to see list of adoptable pets
+    #use api & use shelter id to see list of adoptable pets @ shelter
     url = "http://api.petfinder.com/shelter.getPets?key=#{@@apikey}&id=#{shelter_id}&status=A&format=json"
     response = RestClient.get url
     response_hash = JSON.parse(response.body)
@@ -148,20 +152,21 @@ class CommandLineInterface
     puts "Which pet would you like to adopt?"
     input = gets.chomp
 
-    my_pet = adoptable_pets.find do |pet|
+    @pet_name = adoptable_pets.find do |pet|
       input == pet
     end
 
-    Pet.find_or_create_by(name: my_pet, caretaker_id: @caretaker.id, shelter_id: @shelter.id)
-      puts "Congratulations! You adopted #{my_pet}"
+    Pet.find_or_create_by(caretaker_id: @caretaker.id, shelter_id: @shelter.id, name: @pet_name)
+      puts "Congratulations! You adopted #{@pet_name}"
       puts ' |\__/,|   (`\        \ ______/ V`-, '
       puts " |_ _  |.--.) )       }        /~~'  "
       puts " ( T   )     /       /_)^ --,r' "
       puts "(((^_(((/(((_/      |b      |b "
+      puts ""
     end
 
 
-#2. Choose type of pet
+#2. Get random pet
   def get_type_input
     puts "Are you interested in adopting a cat or a dog?"
     type_input = gets.chomp
@@ -177,27 +182,45 @@ class CommandLineInterface
   def get_random_pet(response_hash)
     #iterate over response_hash to get information about a random pet
     @random_pet_name = response_hash["petfinder"]["pet"]["name"]["$t"]
+    @random_pet_type = response_hash["petfinder"]["pet"]["animal"]["$t"]
+    binding.pry
+    @random_shelter = Shelter.find_or_create_by(name: response_hash["petfinder"]["pet"]["shelterId"]["$t"])
 
     puts "Name: #{@random_pet_name}"
+    puts "  Type: #{@random_pet_type}"
     puts "  Breed: #{response_hash["petfinder"]["pet"]["breeds"]["breed"]["$t"]}"
     puts "  Age: #{response_hash["petfinder"]["pet"]["age"]["$t"]}"
     puts "  Description: #{response_hash["petfinder"]["pet"]["description"]["$t"]}"
+    puts ""
   end
 
   def adopt_user_input(response_hash)
-    puts "Would you like to adopt #{response_hash["petfinder"]["pet"]["name"]["$t"]}? (yes or no)"
+    puts "Would you like to adopt #{@random_pet_name}? (yes or no)"
     gets.chomp
   end
 
   def adopt?(user_input, response_hash)
     case user_input
     when "yes"
-
-      ##how do you add caretaker_id?
-      Pet.create(caretaker_id: self, name: "#{response_hash["petfinder"]["pet"]["name"]["$t"]}", breed: "#{response_hash["petfinder"]["pet"]["breeds"]["breed"]["$t"]}")
-      puts "Congratulations! You adopted #{response_hash["petfinder"]["pet"]["name"]["$t"]}"
+      Pet.find_or_create_by(caretaker_id: @caretaker.id, shelter_id: @random_shelter, name: @random_pet_name, breed: @random_pet_type)
+      puts "Congratulations! You adopted #{@random_pet_name}"
+      puts ' |\__/,|   (`\        \ ______/ V`-, '
+      puts " |_ _  |.--.) )       }        /~~'  "
+      puts " ( T   )     /       /_)^ --,r' "
+      puts "(((^_(((/(((_/      |b      |b "
+    when "no"
+      menu
     end
   end
 
+
+  #---------SEE PETS--------#
+
+  def caretaker_pets
+    puts "Your pets:"
+    @caretaker.pets.each.with_index(1) do |pet, index|
+      puts "#{index}. #{pet.name}"
+    end
+  end
 
 end
