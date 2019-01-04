@@ -4,10 +4,8 @@ class CreatePets < ActiveRecord::Migration[5.0]
       p.belongs_to :caretaker, index: true
       p.belongs_to :shelter, index:true
 
+      p.string :name
       p.string :type
-      p.string :size
-      p.string :age
-      p.string :sex
     end
   end
 end
