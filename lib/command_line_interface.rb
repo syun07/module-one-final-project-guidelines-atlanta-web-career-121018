@@ -76,6 +76,7 @@ class CommandLineInterface
       menu
     when "3"
       caretaker_pets
+      menu
     end
   end
 
@@ -119,7 +120,7 @@ class CommandLineInterface
   def create_shelter(selected_shelter)
     #create new instance of shelter
     shelter = @zip_shelters.select { |shelter| shelter["name"]["$t"] == selected_shelter }.first
-    @shelter = Shelter.find_or_create_by(name: shelter["name"]["$t"], location: shelter["city"]["$t"])
+    @shelter = Shelter.find_or_create_by(name: shelter["name"]["$t"])
   end
 
   def get_shelter_id(selected_shelter)
@@ -183,7 +184,6 @@ class CommandLineInterface
     #iterate over response_hash to get information about a random pet
     @random_pet_name = response_hash["petfinder"]["pet"]["name"]["$t"]
     @random_pet_type = response_hash["petfinder"]["pet"]["animal"]["$t"]
-    binding.pry
     @random_shelter = Shelter.find_or_create_by(name: response_hash["petfinder"]["pet"]["shelterId"]["$t"])
 
     puts "Name: #{@random_pet_name}"
