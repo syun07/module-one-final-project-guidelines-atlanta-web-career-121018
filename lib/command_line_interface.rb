@@ -44,6 +44,7 @@ class CommandLineInterface
 
     @caretaker = Caretaker.find_or_create_by(name: username)
     puts "Welcome, #{username}!"
+    puts ""
   end
 
   #------------MENU------------#
@@ -143,6 +144,7 @@ class CommandLineInterface
     adoptable_pets = response_hash["petfinder"]["pets"]["pet"].collect do |pet|
       pet["name"]["$t"]
     end
+
     #iterate over array to list each pet
     adoptable_pets.each do |pet|
       puts pet
@@ -222,5 +224,4 @@ class CommandLineInterface
       puts "#{index}. #{pet.name}"
     end
   end
-
 end
