@@ -42,7 +42,7 @@ class CommandLineInterface
     puts "Please enter a username:"
     username = gets.chomp.to_s
 
-    Caretaker.find_or_create_by(name: username)
+    @caretaker = Caretaker.find_or_create_by(name: username)
     puts "Welcome, #{username}!"
   end
 
@@ -61,6 +61,7 @@ class CommandLineInterface
       @shelter_array = find_shelters(zip_code)
       input = get_user_input
       selected_shelter = shelter_info(input)
+      create_shelter(selected_shelter)
       shelter_id = get_shelter_id(selected_shelter)
       adoptable_pets = get_pet(shelter_id, selected_shelter)
       adopt_pet(adoptable_pets)
@@ -111,6 +112,12 @@ class CommandLineInterface
      @shelter_array[input-1]
   end
 
+  def create_shelter(selected_shelter)
+    shelter = @zip_shelters.select { |shelter| shelter["name"]["$t"] == selected_shelter }.first
+    @shelter = Shelter.find_or_create_by(name: shelter["name"]["$t"], location: shelter["city"]["$t"])
+
+  end
+
   def get_shelter_id(selected_shelter)
     #iterate through all shelters to find name that matches selected shelter
     #get shelter id
@@ -127,11 +134,11 @@ class CommandLineInterface
     response_hash = JSON.parse(response.body)
 
     puts "Here are all the pets available for adoption at #{selected_shelter}:"
+    #collect adoptable pets & creates new array
     adoptable_pets = response_hash["petfinder"]["pets"]["pet"].collect do |pet|
       pet["name"]["$t"]
     end
-
-
+    #iterate over array to list each pet
     adoptable_pets.each do |pet|
       puts pet
     end
@@ -145,8 +152,12 @@ class CommandLineInterface
       input == pet
     end
 
-    Pet.find_or_create_by(name: my_pet)
+    Pet.find_or_create_by(name: my_pet, caretaker_id: @caretaker.id, shelter_id: @shelter.id)
       puts "Congratulations! You adopted #{my_pet}"
+      puts ' |\__/,|   (`\        \ ______/ V`-, '
+      puts " |_ _  |.--.) )       }        /~~'  "
+      puts " ( T   )     /       /_)^ --,r' "
+      puts "(((^_(((/(((_/      |b      |b "
     end
 
 
@@ -157,14 +168,17 @@ class CommandLineInterface
   end
 
   def pet_response_hash(type_input)
+    #get response hash for random pet based on type input
     url = "http://api.petfinder.com/pet.getRandom?key=#{@@apikey}&animal=#{type_input}&output=basic&format=json"
-    # puts url
     response = RestClient.get url
     response_hash = JSON.parse(response.body)
   end
 
   def get_random_pet(response_hash)
-    puts "Name: #{response_hash["petfinder"]["pet"]["name"]["$t"]}"
+    #iterate over response_hash to get information about a random pet
+    @random_pet_name = response_hash["petfinder"]["pet"]["name"]["$t"]
+
+    puts "Name: #{@random_pet_name}"
     puts "  Breed: #{response_hash["petfinder"]["pet"]["breeds"]["breed"]["$t"]}"
     puts "  Age: #{response_hash["petfinder"]["pet"]["age"]["$t"]}"
     puts "  Description: #{response_hash["petfinder"]["pet"]["description"]["$t"]}"
