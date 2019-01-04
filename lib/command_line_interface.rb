@@ -2,6 +2,14 @@ class CommandLineInterface
 
   @@apikey = 'b1eab88e7ce8602d4150d991dede49de'
 
+  def run
+    greet
+    username
+    menu
+  end
+
+#------------GREET------------#
+
   def greet
     puts "   _.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._ "
     puts " ,'_.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._`."
@@ -27,23 +35,56 @@ class CommandLineInterface
     puts " `._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._.-._,'"
   end
 
-  def get_username
-    puts "Please enter a username:"
-    gets.chomp.to_s
-  end
 
-  def find_or_create_username(username)
+  #------------USERNAME------------#
+
+  def username
+    puts "Please enter a username:"
+    username = gets.chomp.to_s
+
     Caretaker.find_or_create_by(name: username)
     puts "Welcome, #{username}!"
-    #use switch statement to say "Welcome back" if you already have an account (if time)
   end
+
+  #------------MENU------------#
+
+  def menu
+    puts "1. Find shelters near you"
+    puts "2. Find a pet at random"
+    puts "3. See your pets"
+
+    menu_choice = gets.chomp
+
+    case menu_choice
+    when "1"
+      zip_code = get_zip_code
+      @shelter_array = find_shelters(zip_code)
+      input = get_user_input
+      selected_shelter = shelter_info(input)
+      shelter_id = get_shelter_id(selected_shelter)
+      adoptable_pets = get_pet(shelter_id, selected_shelter)
+      adopt_pet(adoptable_pets)
+    when "2"
+      type_input = get_type_input
+      response_hash = pet_response_hash(type_input)
+      get_random_pet(response_hash)
+      user_input = adopt_user_input(response_hash)
+      adopt?(user_input, response_hash)
+    end
+  end
+
+
+
+  #------------MENU OPTION 1------------#
+    #------------Shelters------------#
 
   def get_zip_code
     puts "Please enter your zip code to see shelters near you:"
-    zip_code = gets.chomp
+    gets.chomp
   end
 
   def find_shelters(zip_code)
+    #use api to find shelters based on zip code
     url = "http://api.petfinder.com/shelter.find?key=#{@@apikey}&location=#{zip_code}&format=json"
     puts "URL: #{url}"
     response = RestClient.get url
@@ -56,34 +97,32 @@ class CommandLineInterface
     end
   end
 
-
   def get_user_input
+    #user chooses from a list of shelters in their area
     @shelter_array.each.with_index(1) do |shelter, index|
       puts "#{index}: #{shelter}"
     end
-    puts "Choose a shelter:"
-    input = gets.chomp.to_i
+    puts "Choose a shelter to see a list of adoptable pets:"
+    gets.chomp.to_i
   end
-
 
   def shelter_info(input)
-     selected_shelter = @shelter_array[input-1]
-     #selects shelter name from array using input
+    #get selected shelter
+     @shelter_array[input-1]
   end
 
-
   def get_shelter_id(selected_shelter)
+    #iterate through all shelters to find name that matches selected shelter
+    #get shelter id
     found_id = @zip_shelters.find do |shelter|
        shelter["name"]["$t"] == selected_shelter
-         # puts "#{shelter["id"]["$t"]}"
     end
     found_id["id"]["$t"]
   end
 
-
   def get_pet(shelter_id, selected_shelter)
+    #use api & use shelter id to see list of adoptable pets
     url = "http://api.petfinder.com/shelter.getPets?key=#{@@apikey}&id=#{shelter_id}&status=A&format=json"
-    puts url
     response = RestClient.get url
     response_hash = JSON.parse(response.body)
 
@@ -91,11 +130,12 @@ class CommandLineInterface
     adoptable_pets = response_hash["petfinder"]["pets"]["pet"].collect do |pet|
       pet["name"]["$t"]
     end
+
+
     adoptable_pets.each do |pet|
       puts pet
     end
   end
-
 
   def adopt_pet(adoptable_pets)
     puts "Which pet would you like to adopt?"
@@ -110,48 +150,40 @@ class CommandLineInterface
     end
 
 
-
-
-
-  # def get_type_input
-  #   puts "Are you interested in adopting a cat or a dog?"
-  #
-  #   type_input = gets.chomp
-  # end
-
-
-
-
-  # def get_pet(type_input, shelter_id)
-  #   # binding.pry
-  #   url = "http://api.petfinder.com/pet.getRandom?key=#{@@apikey}&animal=#{type_input}&shelterid=#{shelter_id}&output=basic&format=json"
-  #   puts url
-  #   response = RestClient.get url
-  #   response_hash = JSON.parse(response.body)
-  #   binding.pry
-  # end
-
-
-  def run
-    greet
-    username = get_username
-    find_or_create_username(username)
-    zip_code = get_zip_code
-    @shelter_array = find_shelters(zip_code)
-    input = get_user_input
-    selected_shelter = shelter_info(input)
-    shelter_id = get_shelter_id(selected_shelter)
-    adoptable_pets = get_pet(shelter_id, selected_shelter)
-    adopt_pet(adoptable_pets)
-    # type_input = get_type_input
+#2. Choose type of pet
+  def get_type_input
+    puts "Are you interested in adopting a cat or a dog?"
+    type_input = gets.chomp
   end
+
+  def pet_response_hash(type_input)
+    url = "http://api.petfinder.com/pet.getRandom?key=#{@@apikey}&animal=#{type_input}&output=basic&format=json"
+    # puts url
+    response = RestClient.get url
+    response_hash = JSON.parse(response.body)
+  end
+
+  def get_random_pet(response_hash)
+    puts "Name: #{response_hash["petfinder"]["pet"]["name"]["$t"]}"
+    puts "  Breed: #{response_hash["petfinder"]["pet"]["breeds"]["breed"]["$t"]}"
+    puts "  Age: #{response_hash["petfinder"]["pet"]["age"]["$t"]}"
+    puts "  Description: #{response_hash["petfinder"]["pet"]["description"]["$t"]}"
+  end
+
+  def adopt_user_input(response_hash)
+    puts "Would you like to adopt #{response_hash["petfinder"]["pet"]["name"]["$t"]}? (yes or no)"
+    gets.chomp
+  end
+
+  def adopt?(user_input, response_hash)
+    case user_input
+    when "yes"
+
+      ##how do you add caretaker_id?
+      Pet.create(caretaker_id: self, name: "#{response_hash["petfinder"]["pet"]["name"]["$t"]}", breed: "#{response_hash["petfinder"]["pet"]["breeds"]["breed"]["$t"]}")
+      puts "Congratulations! You adopted #{response_hash["petfinder"]["pet"]["name"]["$t"]}"
+    end
+  end
+
+
 end
-
-
-  # def search_pet_type(search_term)
-  #   url = "http://api.petfinder.com/pet.find?key=#{@@apikey}&animal=#{search_term}&format=json"
-  #   puts "URL: #{url}"
-  #   response = RestClient.get url
-  #   response_hash = JSON.parse(response.body)
-  #   # puts response_hash
-  # end

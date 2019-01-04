@@ -5,7 +5,7 @@ class CreatePets < ActiveRecord::Migration[5.0]
       p.belongs_to :shelter, index:true
 
       p.string :name
-      p.string :type
+      p.string :breed
     end
   end
 end
